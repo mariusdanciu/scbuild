@@ -11,25 +11,20 @@ import org.apache.ivy.core.resolve.ResolveOptions
 import org.apache.ivy.core.resolve.ResolvedModuleRevision
 import scala.util.Success
 import org.apache.ivy.core.report.DownloadStatus
-import net.scbuild.resolvers.BuildSetup
-
-/**
- * @author marius
- */
+import net.scbuild.resolvers.BuildContext
 
 case class Artifact(name: String, artifactType: String, path: String)
 
 object Dependency {
-  def apply(organization: String, module: String, version: String)(implicit setup: BuildSetup) = {
+  def apply(organization: String, module: String, version: String)(implicit setup: BuildContext) = {
     new Dependency(organization, module, version, List("default"))
   }
-
 }
-case class Dependency(organization: String, module: String, version: String, configs: List[String])(implicit setup: BuildSetup) {
+case class Dependency(organization: String, module: String, version: String, configs: List[String])(implicit setup: BuildContext) {
 
   private val ro = new ResolveOptions()
 
-  ro.setTransitive(true);
+  ro.setTransitive(true)
   ro.setUseCacheOnly(false)
   ro.setRefresh(true)
   ro.setRevision(version)
@@ -37,7 +32,6 @@ case class Dependency(organization: String, module: String, version: String, con
 
   def dependencies: Try[List[Dependency]] = {
     val mr = new ModuleRevisionId(new ModuleId(organization, module), version)
-
     val found = setup.ivy.findModule(mr)
 
     if (found != null) {
@@ -51,9 +45,9 @@ case class Dependency(organization: String, module: String, version: String, con
 
   def resolveArtifacts: Try[List[Artifact]] = {
     val mr = new ModuleRevisionId(new ModuleId(organization, module), version)
-    
+
     val found = setup.ivy.findModule(mr)
-    
+
     if (found != null) {
       Try {
         found.getDescriptor.getAllArtifacts flatMap { a =>

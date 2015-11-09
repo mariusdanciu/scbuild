@@ -2,8 +2,6 @@ package net.scbuild
 
 import java.io.File
 import scala.util.Failure
-import org.apache.ivy.Ivy
-import org.apache.ivy.core.settings.IvySettings
 import net.scbuild.resolvers._
 
 /**
@@ -11,16 +9,16 @@ import net.scbuild.resolvers._
  */
 object Main extends App {
 
-  implicit val setup = BuildSetup(BuildProps());
-  
+  implicit val props = BuildProps("ivy.local.default.root" -> "/home/marius/.ivy2/local")
+
   val fs = FileSystemResolver("[organisation]/[module]/[revision]/ivys/ivy.xml", "[organisation]/[module]/[revision]/jars/[artifact].[ext]", true)
 
   val ibiblio = IBiblioResolver("central")
 
-  ChainResolver(ibiblio, fs) register
-
+  implicit val c = BuildContext(props, ChainResolver(ibiblio, fs))
 
   val dep = Dependency("com.ibm.tdw2", "tdw2_2.10", "0.1.0")
+  
   println(dep.resolveArtifacts match {
     case Failure(f) => f.printStackTrace()
     case s          => s
