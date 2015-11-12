@@ -33,7 +33,6 @@ case class BuildContext(props: BuildProps, resolver: RepoResolver) {
     settings.setDefaultCache(new File("ivy/cache"))
     settings.addResolver(resolver.ivyResolver)
     settings.setDefaultResolver(resolver.name)
-    //resolver.ivyResolver.setSettings(settings)
 
     Ivy.newInstance(settings)
   }

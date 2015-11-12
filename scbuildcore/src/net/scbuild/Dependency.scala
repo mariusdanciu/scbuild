@@ -1,17 +1,24 @@
 package net.scbuild
 
+import java.net.URL
+import java.util.Date
+import scala.collection.JavaConversions.seqAsJavaList
 import scala.util.Failure
+import scala.util.Success
 import scala.util.Try
-import org.apache.ivy.Ivy
-import org.apache.ivy.core.module.descriptor.DependencyDescriptor
+import org.apache.ivy.core.deliver.DeliverOptions
+import org.apache.ivy.core.module.descriptor.DefaultArtifact
+import org.apache.ivy.core.module.descriptor.DefaultDependencyArtifactDescriptor
+import org.apache.ivy.core.module.descriptor.DefaultDependencyDescriptor
+import org.apache.ivy.core.module.descriptor.DefaultModuleDescriptor
 import org.apache.ivy.core.module.id.ModuleId
 import org.apache.ivy.core.module.id.ModuleRevisionId
+import org.apache.ivy.core.publish.PublishOptions
+import org.apache.ivy.core.report.DownloadStatus
 import org.apache.ivy.core.resolve.DownloadOptions
 import org.apache.ivy.core.resolve.ResolveOptions
-import org.apache.ivy.core.resolve.ResolvedModuleRevision
-import scala.util.Success
-import org.apache.ivy.core.report.DownloadStatus
 import net.scbuild.resolvers.BuildContext
+import org.apache.ivy.core.module.descriptor.Configuration
 
 case class Artifact(name: String, artifactType: String, path: String)
 
@@ -88,4 +95,47 @@ case class Dependency(organization: String, module: String, version: String, con
     }
   }
 
+  def publish(ps: PublishSettings) = {
+    val mr = new ModuleRevisionId(new ModuleId(organization, module), version)
+
+    import scala.collection.JavaConversions._
+
+    val arts = for { Artifact(name, tpe, path) <- ps.artifacts } yield {
+      new DefaultArtifact(mr, new Date, name, tpe, tpe, null, null)
+    }
+
+    val m = DefaultModuleDescriptor.newDefaultInstance(mr, Array())
+    for {
+      c <- ps.confs
+      a <- arts
+    } {
+      val conf = new Configuration(c)
+      m.addConfiguration(conf)
+      m.addArtifact(c, a)
+    }
+    setup.ivy.getSettings.getResolutionCacheManager.saveResolvedModuleDescriptor(m)
+
+    val ro = new ResolveOptions
+    val r = setup.ivy.resolve(m, ro)
+
+    val dopts = new DeliverOptions
+    dopts.setConfs(ps.confs.toArray)
+    dopts.setPubdate(new Date)
+    dopts.setStatus(ps.status)
+
+    setup.ivy.deliver(mr, version, ps.ivyPattern, dopts)
+
+    val opts = new PublishOptions
+    opts.setConfs(ps.confs.toArray)
+    opts.setSrcIvyPattern(ps.ivyPattern)
+    opts.setOverwrite(true)
+
+    val published = setup.ivy.publish(mr, ps.artifacts.map { _.path }, ps.repositoryName, opts)
+  }
+
 }
+object PublishSettings {
+  def apply(artifacts: List[Artifact], confs: String*) = new PublishSettings(confs.toList, "release", "local", "ivy.xml", artifacts)
+}
+
+case class PublishSettings(confs: List[String], status: String, repositoryName: String, ivyPattern: String, artifacts: List[Artifact])

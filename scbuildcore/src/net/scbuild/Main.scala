@@ -28,4 +28,7 @@ object Main extends App {
 
   println(dep.resolveAll)
 
+  
+  val test = Dependency("com.ibm.test", "test", "0.1.0")
+  test.publish(PublishSettings(List(Artifact("test", "jar", "/home/marius/work/dev/git/scbuild/scbuildcore/lib/test.jar")), "build"))
 }
